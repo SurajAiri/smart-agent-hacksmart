@@ -6,7 +6,8 @@
  * - Track bot status per room
  */
 
-const AI_AGENT_URL = process.env.AI_AGENT_URL || 'http://localhost:8000';
+// Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues
+const AI_AGENT_URL = process.env.AI_AGENT_URL || 'http://127.0.0.1:8000';
 
 /**
  * Spawn the AI bot to join a LiveKit room

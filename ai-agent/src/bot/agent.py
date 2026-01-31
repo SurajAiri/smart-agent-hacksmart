@@ -167,12 +167,26 @@ class VoiceAgent:
     
     async def stop(self):
         """
-        Stop the voice pipeline.
+        Stop the voice pipeline and disconnect from LiveKit.
         """
         logger.info(f"Stopping VoiceAgent for room: {self.room_name}")
         
-        if self._task:
-            await self._task.queue_frames([EndFrame()])
-        
-        if self._runner:
-            await self._runner.stop_when_done()
+        try:
+            # Queue end frame to signal pipeline to stop
+            if self._task:
+                await self._task.queue_frames([EndFrame()])
+            
+            # Wait for runner to stop with a timeout
+            if self._runner:
+                try:
+                    # Use asyncio.wait_for with timeout to prevent hanging
+                    await asyncio.wait_for(self._runner.stop_when_done(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    logger.warning(f"Runner stop timeout for room: {self.room_name}, forcing stop")
+                    # Force cancel if timeout
+                    if hasattr(self._runner, 'cancel'):
+                        self._runner.cancel()
+        except Exception as e:
+            logger.error(f"Error stopping agent: {e}")
+        finally:
+            logger.info(f"VoiceAgent stopped for room: {self.room_name}")

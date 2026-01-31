@@ -4,242 +4,770 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Driver Test - Smart Agent</title>
+    <meta name="description" content="Smart Agent Voice Call Test Interface">
+    <meta name="theme-color" content="#0f0f0f">
+    <title>Smart Agent | Voice Call</title>
+    
+    <!-- Preload fonts for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        * {
+        /* CSS Custom Properties for easy theming */
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #141416;
+            --bg-tertiary: #1c1c1f;
+            --bg-card: #18181b;
+            --bg-input: #0f0f10;
+            
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            
+            --accent-primary: #6366f1;
+            --accent-primary-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.2);
+            
+            --success: #22c55e;
+            --success-muted: rgba(34, 197, 94, 0.15);
+            --warning: #eab308;
+            --warning-muted: rgba(234, 179, 8, 0.15);
+            --error: #ef4444;
+            --error-muted: rgba(239, 68, 68, 0.15);
+            --ai-accent: #a855f7;
+            --ai-muted: rgba(168, 85, 247, 0.15);
+            --info: #3b82f6;
+            --info-muted: rgba(59, 130, 246, 0.15);
+            
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-default: rgba(255, 255, 255, 0.1);
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+            
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 40px var(--accent-glow);
+            
+            --transition-fast: 150ms ease;
+            --transition-normal: 250ms ease;
+            --transition-slow: 350ms ease;
+            
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Monaco, monospace;
+        }
+
+        /* Reset & Base */
+        *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-primary);
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        /* Focus visible for accessibility */
+        :focus-visible {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 2px;
+        }
+
+        /* Skip to main content for accessibility */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--accent-primary);
+            color: white;
+            padding: 8px 16px;
+            z-index: 100;
+            border-radius: var(--radius-sm);
+            transition: top var(--transition-fast);
+        }
+
+        .skip-link:focus {
+            top: 10px;
+        }
+
+        /* Main Container */
         .container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px;
-            width: 400px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: 32px;
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle gradient accent at top */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--accent-primary) 20%, 
+                var(--accent-primary) 80%, 
+                transparent
+            );
+            opacity: 0.5;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--ai-accent) 100%);
+            border-radius: var(--radius-lg);
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .logo svg {
+            width: 28px;
+            height: 28px;
+            color: white;
         }
 
         h1 {
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 24px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: 4px;
         }
 
         .subtitle {
-            text-align: center;
-            color: #888;
-            margin-bottom: 30px;
-            font-size: 14px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 400;
         }
 
-        .status {
+        /* Configuration Section */
+        .config-section {
+            margin-bottom: 24px;
+        }
+
+        .config-toggle {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            border: none;
+            width: 100%;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-family: inherit;
+        }
+
+        .config-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .config-toggle svg {
+            width: 16px;
+            height: 16px;
+            transition: transform var(--transition-normal);
+        }
+
+        .config-toggle[aria-expanded="true"] svg {
+            transform: rotate(180deg);
+        }
+
+        .config-panel {
+            display: none;
+            padding-top: 16px;
+        }
+
+        .config-panel.open {
+            display: block;
+            animation: slideDown var(--transition-normal);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-default);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-family: var(--font-mono);
+            transition: all var(--transition-fast);
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .input-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-group input[readonly] {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Status Card */
+        .status-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-lg);
+            margin-bottom: 24px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .status-indicator {
+            position: relative;
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
         }
 
         .status-dot {
             width: 12px;
             height: 12px;
-            border-radius: 50%;
-            background: #666;
+            border-radius: var(--radius-full);
+            background: var(--text-muted);
+            transition: background var(--transition-normal);
         }
 
         .status-dot.connected {
-            background: #4ade80;
-            box-shadow: 0 0 10px #4ade80;
+            background: var(--success);
+        }
+
+        .status-dot.connected::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: var(--radius-full);
+            background: var(--success);
+            opacity: 0.3;
+            animation: pulseRing 2s ease-out infinite;
         }
 
         .status-dot.connecting {
-            background: #facc15;
-            animation: pulse 1s infinite;
+            background: var(--warning);
+            animation: pulse 1.5s ease-in-out infinite;
         }
 
         .status-dot.error {
-            background: #ef4444;
+            background: var(--error);
         }
 
         @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
         }
 
-        .btn {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
+        @keyframes pulseRing {
+            0% { transform: scale(1); opacity: 0.3; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .status-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        #statusText {
+            font-size: 0.9375rem;
             font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Audio Visualizer */
+        .audio-visualizer {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 3px;
+            height: 64px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .audio-visualizer.active {
+            display: flex;
+        }
+
+        .bar {
+            width: 4px;
+            background: linear-gradient(to top, var(--accent-primary), var(--ai-accent));
+            border-radius: var(--radius-full);
+            transition: height 80ms ease-out;
+            min-height: 4px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 10px;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--accent-primary);
             color: white;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
         }
 
         .btn-primary:disabled {
-            background: #444;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
             cursor: not-allowed;
-            transform: none;
             box-shadow: none;
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            background: var(--error);
             color: white;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
         }
 
         .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
         }
 
-        .audio-indicator {
+        .btn-danger:active {
+            transform: translateY(0);
+        }
+
+        /* Log Panel */
+        .log-section {
+            margin-top: 24px;
+        }
+
+        .log-header {
             display: flex;
-            justify-content: center;
-            gap: 4px;
-            margin: 20px 0;
-            height: 40px;
-            align-items: flex-end;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
         }
 
-        .bar {
-            width: 6px;
-            background: #667eea;
-            border-radius: 3px;
-            transition: height 0.1s;
+        .log-title {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .log-clear {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition-fast);
+        }
+
+        .log-clear:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
         }
 
         .log {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 10px;
-            padding: 15px;
-            max-height: 200px;
+            background: var(--bg-input);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            max-height: 180px;
             overflow-y: auto;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 12px;
-            margin-top: 20px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            border: 1px solid var(--border-subtle);
+            scroll-behavior: smooth;
+        }
+
+        .log::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .log::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-full);
+        }
+
+        .log::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
         }
 
         .log-entry {
-            margin-bottom: 5px;
-            padding: 5px;
-            border-radius: 4px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .log-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .log-entry .time {
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .log-entry .message {
+            word-break: break-word;
         }
 
         .log-entry.info {
-            color: #60a5fa;
+            color: var(--info);
+            background: var(--info-muted);
         }
 
         .log-entry.success {
-            color: #4ade80;
+            color: var(--success);
+            background: var(--success-muted);
         }
 
         .log-entry.error {
-            color: #ef4444;
+            color: var(--error);
+            background: var(--error-muted);
         }
 
         .log-entry.ai {
-            color: #c084fc;
+            color: var(--ai-accent);
+            background: var(--ai-muted);
         }
 
-        .config {
-            margin-bottom: 20px;
+        .log-empty {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 24px;
+            font-style: italic;
         }
 
-        .config input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.3);
-            color: #fff;
-            font-size: 14px;
-            margin-bottom: 10px;
+        /* Mobile Optimizations */
+        @media (max-width: 480px) {
+            body {
+                padding: 16px;
+                justify-content: flex-start;
+                padding-top: 40px;
+            }
+
+            .container {
+                padding: 24px;
+                border-radius: var(--radius-lg);
+            }
+
+            h1 {
+                font-size: 1.375rem;
+            }
+
+            .logo {
+                width: 48px;
+                height: 48px;
+            }
+
+            .logo svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            .btn {
+                padding: 14px 20px;
+            }
+
+            .log {
+                max-height: 150px;
+            }
         }
 
-        .config input::placeholder {
-            color: #666;
+        /* Reduced motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
 
-        .config label {
-            display: block;
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 5px;
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            :root {
+                --border-subtle: rgba(255, 255, 255, 0.3);
+                --border-default: rgba(255, 255, 255, 0.5);
+            }
+        }
+
+        /* Safe area insets for notched devices */
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(20px, env(safe-area-inset-left));
+                padding-right: max(20px, env(safe-area-inset-right));
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+            }
+        }
+
+        /* Hidden utility */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Screen reader only */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>🚗 Driver Test</h1>
-        <p class="subtitle">Smart Agent Voice Call Test</p>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <main id="main-content" class="container" role="main" aria-label="Voice Call Interface">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+            </div>
+            <h1>Smart Agent</h1>
+            <p class="subtitle">AI-Powered Voice Assistant</p>
+        </header>
 
-        <div class="config">
-            <label>Backend URL</label>
-            <input type="text" id="backendUrl" value="http://localhost:3000" placeholder="Backend URL">
+        <!-- Configuration Section -->
+        <section class="config-section" aria-label="Connection Settings">
+            <button 
+                class="config-toggle" 
+                id="configToggle" 
+                aria-expanded="false" 
+                aria-controls="configPanel"
+                onclick="toggleConfig()"
+            >
+                <span>Connection Settings</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            
+            <div class="config-panel" id="configPanel" role="region" aria-labelledby="configToggle">
+                <div class="input-group">
+                    <label for="backendUrl">Backend URL</label>
+                    <input 
+                        type="url" 
+                        id="backendUrl" 
+                        value="http://localhost:3000" 
+                        placeholder="http://localhost:3000"
+                        aria-describedby="backendUrlHint"
+                    >
+                    <span id="backendUrlHint" class="sr-only">Enter the backend server URL</span>
+                </div>
 
-            <label>LiveKit URL (auto-loaded from backend)</label>
-            <input type="text" id="livekitUrl" value="" placeholder="Loading..." readonly>
+                <div class="input-group">
+                    <label for="livekitUrl">LiveKit URL</label>
+                    <input 
+                        type="text" 
+                        id="livekitUrl" 
+                        value="" 
+                        placeholder="Auto-loaded from backend..." 
+                        readonly
+                        aria-describedby="livekitUrlHint"
+                    >
+                    <span id="livekitUrlHint" class="sr-only">LiveKit URL is automatically loaded from the backend</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Status Card -->
+        <div class="status-card" role="status" aria-live="polite">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot" aria-hidden="true"></div>
+            </div>
+            <div class="status-content">
+                <div class="status-label">Connection Status</div>
+                <div id="statusText">Disconnected</div>
+            </div>
         </div>
 
-        <div class="status">
-            <div class="status-dot" id="statusDot"></div>
-            <span id="statusText">Disconnected</span>
+        <!-- Audio Visualizer -->
+        <div class="audio-visualizer" id="audioIndicator" aria-label="Audio activity indicator" role="img">
+            <div class="bar" style="height: 8px;"></div>
+            <div class="bar" style="height: 16px;"></div>
+            <div class="bar" style="height: 24px;"></div>
+            <div class="bar" style="height: 32px;"></div>
+            <div class="bar" style="height: 24px;"></div>
+            <div class="bar" style="height: 16px;"></div>
+            <div class="bar" style="height: 8px;"></div>
         </div>
 
-        <div class="audio-indicator" id="audioIndicator" style="display: none;">
-            <div class="bar" style="height: 10px;"></div>
-            <div class="bar" style="height: 20px;"></div>
-            <div class="bar" style="height: 30px;"></div>
-            <div class="bar" style="height: 20px;"></div>
-            <div class="bar" style="height: 10px;"></div>
-        </div>
-
-        <button class="btn btn-primary" id="connectBtn" onclick="startCall()" disabled>
-            📞 Start Call
+        <!-- Action Buttons -->
+        <button 
+            class="btn btn-primary" 
+            id="connectBtn" 
+            onclick="startCall()" 
+            disabled
+            aria-describedby="connectHint"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            <span>Start Call</span>
         </button>
+        <span id="connectHint" class="sr-only">Press to start a voice call with the AI agent</span>
 
-        <button class="btn btn-danger" id="disconnectBtn" onclick="endCall()" style="display: none;">
-            📵 End Call
+        <button 
+            class="btn btn-danger hidden" 
+            id="disconnectBtn" 
+            onclick="endCall()"
+            aria-describedby="disconnectHint"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
+                <line x1="22" x2="2" y1="2" y2="22"/>
+            </svg>
+            <span>End Call</span>
         </button>
+        <span id="disconnectHint" class="sr-only">Press to end the current voice call</span>
 
-        <div class="log" id="log"></div>
-    </div>
+        <!-- Log Section -->
+        <section class="log-section" aria-label="Activity Log">
+            <div class="log-header">
+                <span class="log-title">Activity Log</span>
+                <button class="log-clear" onclick="clearLog()" aria-label="Clear activity log">Clear</button>
+            </div>
+            <div class="log" id="log" role="log" aria-live="polite" aria-relevant="additions">
+                <div class="log-empty">Waiting for connection...</div>
+            </div>
+        </section>
+    </main>
 
     <!-- LiveKit Client SDK -->
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
@@ -250,6 +778,22 @@
         let livekitUrl = '';
 
         const BACKEND_URL = () => document.getElementById('backendUrl').value;
+
+        // Toggle configuration panel
+        function toggleConfig() {
+            const toggle = document.getElementById('configToggle');
+            const panel = document.getElementById('configPanel');
+            const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+            
+            toggle.setAttribute('aria-expanded', !isExpanded);
+            panel.classList.toggle('open', !isExpanded);
+        }
+
+        // Clear log
+        function clearLog() {
+            const logEl = document.getElementById('log');
+            logEl.innerHTML = '<div class="log-empty">Log cleared. Waiting for activity...</div>';
+        }
 
         // Auto-load LiveKit URL from backend on page load
         async function loadConfig() {
@@ -275,9 +819,26 @@
 
         function log(message, type = 'info') {
             const logEl = document.getElementById('log');
+            
+            // Remove empty state if present
+            const emptyState = logEl.querySelector('.log-empty');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
             const entry = document.createElement('div');
             entry.className = `log-entry ${type}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            const time = document.createElement('span');
+            time.className = 'time';
+            time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const msg = document.createElement('span');
+            msg.className = 'message';
+            msg.textContent = message;
+            
+            entry.appendChild(time);
+            entry.appendChild(msg);
             logEl.appendChild(entry);
             logEl.scrollTop = logEl.scrollHeight;
         }
@@ -365,9 +926,9 @@
                 log('Microphone enabled', 'success');
 
                 setStatus('connected', 'Connected - In Call');
-                document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('disconnectBtn').style.display = 'block';
-                document.getElementById('audioIndicator').style.display = 'flex';
+                document.getElementById('connectBtn').classList.add('hidden');
+                document.getElementById('disconnectBtn').classList.remove('hidden');
+                document.getElementById('audioIndicator').classList.add('active');
 
                 // 5. Spawn AI agent
                 log('Spawning AI agent...', 'info');
@@ -414,10 +975,10 @@
 
                 log('Call ended', 'success');
                 setStatus('', 'Disconnected');
-                document.getElementById('connectBtn').style.display = 'block';
+                document.getElementById('connectBtn').classList.remove('hidden');
                 document.getElementById('connectBtn').disabled = false;
-                document.getElementById('disconnectBtn').style.display = 'none';
-                document.getElementById('audioIndicator').style.display = 'none';
+                document.getElementById('disconnectBtn').classList.add('hidden');
+                document.getElementById('audioIndicator').classList.remove('active');
                 currentCallId = null;
 
             } catch (error) {
@@ -425,15 +986,21 @@
             }
         }
 
-        // Audio visualization
+        // Audio visualization with smoother animation
         setInterval(() => {
             if (room && room.state === 'connected') {
                 const bars = document.querySelectorAll('.bar');
-                bars.forEach(bar => {
-                    bar.style.height = Math.random() * 30 + 10 + 'px';
+                bars.forEach((bar, index) => {
+                    // Create a more natural wave-like animation
+                    const baseHeight = 8;
+                    const maxHeight = 32;
+                    const randomFactor = Math.random() * 0.7 + 0.3;
+                    const waveOffset = Math.sin(Date.now() / 200 + index) * 0.3 + 0.7;
+                    const height = baseHeight + (maxHeight - baseHeight) * randomFactor * waveOffset;
+                    bar.style.height = height + 'px';
                 });
             }
-        }, 100);
+        }, 80);
     </script>
 </body>
 

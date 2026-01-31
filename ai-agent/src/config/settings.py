@@ -31,14 +31,24 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
     
+    # Google Gemini (LLM) - Fastest high-quality model
+    GOOGLE_API_KEY: str = ""
+    GOOGLE_MODEL: str = "gemini-2.0-flash"
+    
     # ElevenLabs (TTS)
     ELEVENLABS_API_KEY: str
     ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel
     
+    # Sarvam AI (TTS & ASR for Indian languages)
+    SARVAM_API_KEY: str = ""
+    SARVAM_TTS_SPEAKER: str = "anushka"
+    SARVAM_ASR_MODEL: str = "saarika:v2.5"
+    SARVAM_LANGUAGE: str = "hi-IN"  # Hindi, can be: hi-IN, en-IN, ta-IN, te-IN, kn-IN, ml-IN, mr-IN, gu-IN, bn-IN, pa-IN
+    
     # Provider selection (plug-and-play)
-    LLM_PROVIDER: str = "groq"           # "groq", "openai"
-    TTS_PROVIDER: str = "elevenlabs"     # "elevenlabs"
-    ASR_PROVIDER: str = "deepgram"       # "deepgram"
+    LLM_PROVIDER: str = "groq"           # "groq", "openai", "google"
+    TTS_PROVIDER: str = "elevenlabs"     # "elevenlabs", "sarvam"
+    ASR_PROVIDER: str = "deepgram"       # "deepgram", "sarvam"
     
     # Node.js Backend (for callbacks)
     BACKEND_URL: str = "http://localhost:3000"

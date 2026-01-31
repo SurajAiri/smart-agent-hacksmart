@@ -63,6 +63,33 @@ class OpenAILLMProvider(BaseLLMProvider):
         return None
 
 
+@register_llm_provider("google")
+class GoogleLLMProvider(BaseLLMProvider):
+    """Google Gemini LLM provider - fastest high-quality model."""
+    
+    name = "google"
+    
+    def create_model(self, settings: Any) -> Any:
+        """Not used - Pipecat handles model internally."""
+        return None
+    
+    def create_service(self, settings: Any) -> Any:
+        """Create a Google Gemini LLM service."""
+        from pipecat.services.google.llm import GoogleLLMService
+        
+        model = getattr(settings, 'GOOGLE_MODEL', 'gemini-2.0-flash')
+        logger.info(f"Creating Google Gemini LLM service with model: {model}")
+        
+        return GoogleLLMService(
+            api_key=settings.GOOGLE_API_KEY,
+            model=model,
+        )
+    
+    def create_context_aggregator(self, settings: Any) -> Any:
+        """Not used directly - agent creates context aggregator."""
+        return None
+
+
 # TODO: Future LangChain provider for MCP tool calling
 # @register_llm_provider("langchain")
 # class LangChainLLMProvider(BaseLLMProvider):

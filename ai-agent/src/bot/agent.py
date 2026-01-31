@@ -79,7 +79,10 @@ class VoiceAgent:
                     audio_in_sample_rate=16000,
                     audio_out_sample_rate=24000,
                     vad_analyzer=SileroVADAnalyzer(params=VADParams(
-                        stop_secs=0.3,  # Time of silence to detect end of speech
+                        min_volume=0.5,       # Higher threshold to filter noise (default 0.6)
+                        start_secs=0.2,       # Require 200ms of speech to start (reduces false positives)
+                        stop_secs=0.5,        # Wait 500ms of silence before stopping (more natural)
+                        confidence=0.7,       # Higher confidence threshold
                     )),
                 ),
             )

@@ -6,9 +6,18 @@ Endpoints:
 - POST /bot/leave - Leave a room
 - GET /bot/status - Get bot status
 """
+import traceback
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from loguru import logger
+
+# Configure loguru for detailed output
+logger.add(
+    lambda msg: print(msg, end=""),
+    format="<green>{time:HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    level="DEBUG",
+    colorize=True
+)
 
 router = APIRouter()
 
@@ -41,9 +50,16 @@ async def join_room(request: Request, payload: JoinRequest):
     
     Called by Node.js backend when a call starts.
     """
-    bot_manager = request.app.state.bot_manager
+    logger.info("=" * 60)
+    logger.info("BOT JOIN REQUEST RECEIVED")
+    logger.info("=" * 60)
+    logger.debug(f"Payload: room_name={payload.room_name}, call_id={payload.call_id}")
+    logger.debug(f"Token (first 50 chars): {payload.token[:50] if payload.token else 'None'}...")
+    logger.debug(f"Metadata: {payload.metadata}")
     
-    logger.info(f"Bot join request for room: {payload.room_name}")
+    bot_manager = request.app.state.bot_manager
+    logger.debug(f"BotManager retrieved: {bot_manager}")
+    logger.debug(f"Current active bots: {list(bot_manager.active_bots.keys())}")
     
     # Check if already in room
     if bot_manager.is_bot_in_room(payload.room_name):
@@ -55,13 +71,19 @@ async def join_room(request: Request, payload: JoinRequest):
         }
     
     try:
+        logger.info(f"Starting bot join process for room: {payload.room_name}")
+        
         # Start the bot
-        await bot_manager.join_room(
+        bot_instance = await bot_manager.join_room(
             room_name=payload.room_name,
             token=payload.token,
             call_id=payload.call_id,
             metadata=payload.metadata,
         )
+        
+        logger.info(f"Bot join_room completed. Instance: {bot_instance}")
+        logger.info(f"Bot state: {bot_instance.state if bot_instance else 'None'}")
+        logger.info(f"Bot task: {bot_instance._task if bot_instance else 'None'}")
         
         logger.info(f"Bot joined room: {payload.room_name}")
         return {
@@ -72,6 +94,8 @@ async def join_room(request: Request, payload: JoinRequest):
         
     except Exception as e:
         logger.error(f"Failed to join room {payload.room_name}: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Traceback:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

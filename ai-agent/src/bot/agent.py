@@ -8,6 +8,7 @@ Pipeline flow:
 LiveKit Audio In → VAD → ASR → LLM → TTS → LiveKit Audio Out
 """
 import asyncio
+import traceback
 from typing import Optional
 from loguru import logger
 
@@ -58,103 +59,135 @@ class VoiceAgent:
         """
         Start the voice pipeline and run until stopped.
         """
-        logger.info(f"Starting VoiceAgent for room: {self.room_name}")
+        logger.info("=" * 60)
+        logger.info(f"VoiceAgent.run() STARTED for room: {self.room_name}")
+        logger.info("=" * 60)
+        logger.info(f"LiveKit URL: {self.livekit_url}")
+        logger.info(f"Token length: {len(self.token) if self.token else 0}")
         logger.info(f"Providers - LLM: {self._settings.LLM_PROVIDER}, TTS: {self._settings.TTS_PROVIDER}, ASR: {self._settings.ASR_PROVIDER}")
         
-        # Create LiveKit transport with VAD for interruption detection
-        transport = LiveKitTransport(
-            url=self.livekit_url,
-            token=self.token,
-            room_name=self.room_name,
-            params=LiveKitParams(
-                audio_in_enabled=True,
-                audio_out_enabled=True,
-                audio_in_sample_rate=16000,
-                audio_out_sample_rate=24000,
-                vad_analyzer=SileroVADAnalyzer(params=VADParams(
-                    stop_secs=0.3,  # Time of silence to detect end of speech
-                )),
-            ),
-        )
-        
-        # Create services from providers
-        asr_provider = get_asr_provider(self._settings.ASR_PROVIDER)
-        stt = asr_provider.create_service(self._settings)
-        
-        llm_provider = get_llm_provider(self._settings.LLM_PROVIDER)
-        llm = llm_provider.create_service(self._settings)
-        
-        tts_provider = get_tts_provider(self._settings.TTS_PROVIDER)
-        tts = tts_provider.create_service(self._settings)
-        
-        # Create conversation context
-        messages = [
-            {
-                "role": "system",
-                "content": self._settings.SYSTEM_PROMPT,
-            },
-        ]
-        context = OpenAILLMContext(messages)
-        context_aggregator = llm.create_context_aggregator(context)
-        
-        # Build the pipeline
-        pipeline = Pipeline([
-            transport.input(),              # Audio from LiveKit
-            stt,                            # Speech to text
-            context_aggregator.user(),      # Add user message to context
-            llm,                            # Generate response
-            tts,                            # Text to speech
-            transport.output(),             # Audio to LiveKit
-            context_aggregator.assistant(), # Add assistant message to context
-        ])
-        
-        # Create pipeline task
-        self._task = PipelineTask(
-            pipeline,
-            params=PipelineParams(
-                allow_interruptions=True,
-                enable_metrics=True,
-            ),
-        )
-        
-        # Set up event handlers
-        @transport.event_handler("on_participant_connected")
-        async def on_participant_connected(transport, participant):
-            logger.info(f"Participant connected: {participant.identity}")
-            await self._callback.emit_participant_joined(participant.identity)
-        
-        @transport.event_handler("on_participant_disconnected") 
-        async def on_participant_disconnected(transport, participant):
-            logger.info(f"Participant disconnected: {participant.identity}")
-            await self._callback.emit_participant_left(participant.identity)
-        
-        # Create and run the pipeline
-        self._runner = PipelineRunner()
-        
-        # Send initial greeting
-        greeting_messages = [
-            {
-                "role": "system", 
-                "content": self._settings.SYSTEM_PROMPT,
-            },
-            {
-                "role": "user",
-                "content": "The call has just started. Introduce yourself briefly.",
-            },
-        ]
-        
-        await self._task.queue_frames([
-            LLMMessagesFrame(greeting_messages),
-        ])
-        
-        logger.info(f"Pipeline running for room: {self.room_name}")
-        
         try:
+            # Create LiveKit transport with VAD for interruption detection
+            logger.info("Creating LiveKit transport...")
+            transport = LiveKitTransport(
+                url=self.livekit_url,
+                token=self.token,
+                room_name=self.room_name,
+                params=LiveKitParams(
+                    audio_in_enabled=True,
+                    audio_out_enabled=True,
+                    audio_in_sample_rate=16000,
+                    audio_out_sample_rate=24000,
+                    vad_analyzer=SileroVADAnalyzer(params=VADParams(
+                        stop_secs=0.3,  # Time of silence to detect end of speech
+                    )),
+                ),
+            )
+            logger.info(f"LiveKit transport created: {transport}")
+            
+            # Create services from providers
+            logger.info(f"Creating ASR service with provider: {self._settings.ASR_PROVIDER}")
+            asr_provider = get_asr_provider(self._settings.ASR_PROVIDER)
+            logger.debug(f"ASR provider: {asr_provider}")
+            stt = asr_provider.create_service(self._settings)
+            logger.info(f"STT service created: {stt}")
+            
+            logger.info(f"Creating LLM service with provider: {self._settings.LLM_PROVIDER}")
+            llm_provider = get_llm_provider(self._settings.LLM_PROVIDER)
+            logger.debug(f"LLM provider: {llm_provider}")
+            llm = llm_provider.create_service(self._settings)
+            logger.info(f"LLM service created: {llm}")
+            
+            logger.info(f"Creating TTS service with provider: {self._settings.TTS_PROVIDER}")
+            tts_provider = get_tts_provider(self._settings.TTS_PROVIDER)
+            logger.debug(f"TTS provider: {tts_provider}")
+            tts = tts_provider.create_service(self._settings)
+            logger.info(f"TTS service created: {tts}")
+            
+            # Create conversation context
+            logger.info("Creating conversation context...")
+            messages = [
+                {
+                    "role": "system",
+                    "content": self._settings.SYSTEM_PROMPT,
+                },
+            ]
+            context = OpenAILLMContext(messages)
+            context_aggregator = llm.create_context_aggregator(context)
+            logger.info(f"Context aggregator created: {context_aggregator}")
+            
+            # Build the pipeline
+            logger.info("Building pipeline...")
+            pipeline = Pipeline([
+                transport.input(),              # Audio from LiveKit
+                stt,                            # Speech to text
+                context_aggregator.user(),      # Add user message to context
+                llm,                            # Generate response
+                tts,                            # Text to speech
+                transport.output(),             # Audio to LiveKit
+                context_aggregator.assistant(), # Add assistant message to context
+            ])
+            logger.info(f"Pipeline built: {pipeline}")
+            
+            # Create pipeline task
+            logger.info("Creating pipeline task...")
+            self._task = PipelineTask(
+                pipeline,
+                params=PipelineParams(
+                    allow_interruptions=True,
+                    enable_metrics=True,
+                ),
+            )
+            logger.info(f"Pipeline task created: {self._task}")
+            
+            # Set up event handlers
+            @transport.event_handler("on_participant_connected")
+            async def on_participant_connected(transport, participant):
+                logger.info(f"EVENT: Participant connected: {participant.identity}")
+                await self._callback.emit_participant_joined(participant.identity)
+            
+            @transport.event_handler("on_participant_disconnected") 
+            async def on_participant_disconnected(transport, participant):
+                logger.info(f"EVENT: Participant disconnected: {participant.identity}")
+                await self._callback.emit_participant_left(participant.identity)
+            
+            # Create and run the pipeline
+            logger.info("Creating pipeline runner...")
+            self._runner = PipelineRunner()
+            logger.info(f"Pipeline runner created: {self._runner}")
+            
+            # Send initial greeting
+            logger.info("Preparing initial greeting...")
+            greeting_messages = [
+                {
+                    "role": "system", 
+                    "content": self._settings.SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": "The call has just started. Introduce yourself briefly.",
+                },
+            ]
+            
+            logger.info("Queueing greeting frames...")
+            await self._task.queue_frames([
+                LLMMessagesFrame(greeting_messages),
+            ])
+            logger.info("Greeting frames queued")
+            
+            logger.info(f"Starting pipeline runner for room: {self.room_name}")
+            logger.info("Calling self._runner.run(self._task)...")
+            
             await self._runner.run(self._task)
+            
+            logger.info(f"Pipeline runner completed for room: {self.room_name}")
+            
         except asyncio.CancelledError:
             logger.info(f"Pipeline cancelled for room: {self.room_name}")
         except Exception as e:
             logger.error(f"Pipeline error: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Traceback:\n{traceback.format_exc()}")
             await self._callback.emit_error(str(e))
             raise
         finally:

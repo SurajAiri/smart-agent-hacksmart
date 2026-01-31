@@ -7,6 +7,7 @@ Responsibilities:
 - Provide status information
 """
 import asyncio
+import traceback
 from datetime import datetime
 from typing import Dict, Optional
 from loguru import logger
@@ -71,45 +72,73 @@ class BotManager:
         Returns:
             BotInstance for the room
         """
+        logger.info("=" * 60)
+        logger.info("BOT MANAGER: join_room() CALLED")
+        logger.info("=" * 60)
+        logger.debug(f"Parameters: room_name={room_name}, call_id={call_id}")
+        logger.debug(f"Token length: {len(token) if token else 0}")
+        logger.debug(f"Metadata: {metadata}")
+        logger.debug(f"LiveKit URL from settings: {self._settings.LIVEKIT_URL}")
+        
         if self.is_bot_in_room(room_name):
             logger.warning(f"Bot already in room {room_name}")
             return self.active_bots[room_name]
         
-        logger.info(f"Creating bot for room: {room_name} (call_id: {call_id})")
+        logger.info(f"Creating VoiceAgent for room: {room_name} (call_id: {call_id})")
         
-        # Create voice agent
-        agent = VoiceAgent(
-            room_name=room_name,
-            token=token,
-            call_id=call_id,
-            livekit_url=self._settings.LIVEKIT_URL,
-        )
-        
-        # Create bot instance
-        bot = BotInstance(room_name, call_id, agent)
-        self.active_bots[room_name] = bot
-        
-        # Start the agent in a background task
-        bot._task = asyncio.create_task(
-            self._run_agent(bot),
-            name=f"agent-{room_name}",
-        )
-        
-        return bot
+        try:
+            # Create voice agent
+            agent = VoiceAgent(
+                room_name=room_name,
+                token=token,
+                call_id=call_id,
+                livekit_url=self._settings.LIVEKIT_URL,
+            )
+            logger.debug(f"VoiceAgent created successfully: {agent}")
+            
+            # Create bot instance
+            bot = BotInstance(room_name, call_id, agent)
+            self.active_bots[room_name] = bot
+            logger.debug(f"BotInstance created and added to active_bots")
+            
+            # Start the agent in a background task
+            logger.info(f"Creating background task for agent in room: {room_name}")
+            bot._task = asyncio.create_task(
+                self._run_agent(bot),
+                name=f"agent-{room_name}",
+            )
+            logger.info(f"Background task created: {bot._task}")
+            logger.info(f"Task name: {bot._task.get_name()}, done: {bot._task.done()}")
+            
+            return bot
+            
+        except Exception as e:
+            logger.error(f"Exception in join_room: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Traceback:\n{traceback.format_exc()}")
+            raise
     
     async def _run_agent(self, bot: BotInstance):
         """Run the voice agent in a room"""
+        logger.info("=" * 60)
+        logger.info(f"_run_agent() STARTED for room: {bot.room_name}")
+        logger.info("=" * 60)
+        
         try:
             bot.state = "active"
-            logger.info(f"Bot active in room: {bot.room_name}")
+            logger.info(f"Bot state set to 'active' for room: {bot.room_name}")
             
             # Run the agent (this blocks until the agent stops)
+            logger.info(f"Calling bot.agent.run() for room: {bot.room_name}")
             await bot.agent.run()
+            logger.info(f"bot.agent.run() completed for room: {bot.room_name}")
             
         except asyncio.CancelledError:
             logger.info(f"Bot task cancelled for room: {bot.room_name}")
         except Exception as e:
             logger.error(f"Bot error in room {bot.room_name}: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Traceback:\n{traceback.format_exc()}")
             bot.state = "error"
         finally:
             bot.state = "stopped"

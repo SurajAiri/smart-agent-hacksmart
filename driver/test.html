@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Test - Smart Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-dot.connected {
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+        }
+
+        .status-dot.connecting {
+            background: #facc15;
+            animation: pulse 1s infinite;
+        }
+
+        .status-dot.error {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #444;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .audio-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin: 20px 0;
+            height: 40px;
+            align-items: flex-end;
+        }
+
+        .bar {
+            width: 6px;
+            background: #667eea;
+            border-radius: 3px;
+            transition: height 0.1s;
+        }
+
+        .log {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .log-entry.info {
+            color: #60a5fa;
+        }
+
+        .log-entry.success {
+            color: #4ade80;
+        }
+
+        .log-entry.error {
+            color: #ef4444;
+        }
+
+        .log-entry.ai {
+            color: #c084fc;
+        }
+
+        .config {
+            margin-bottom: 20px;
+        }
+
+        .config input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .config input::placeholder {
+            color: #666;
+        }
+
+        .config label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚗 Driver Test</h1>
+        <p class="subtitle">Smart Agent Voice Call Test</p>
+
+        <div class="config">
+            <label>Backend URL</label>
+            <input type="text" id="backendUrl" value="http://localhost:3000" placeholder="Backend URL">
+
+            <label>LiveKit URL (auto-loaded from backend)</label>
+            <input type="text" id="livekitUrl" value="" placeholder="Loading..." readonly>
+        </div>
+
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+
+        <div class="audio-indicator" id="audioIndicator" style="display: none;">
+            <div class="bar" style="height: 10px;"></div>
+            <div class="bar" style="height: 20px;"></div>
+            <div class="bar" style="height: 30px;"></div>
+            <div class="bar" style="height: 20px;"></div>
+            <div class="bar" style="height: 10px;"></div>
+        </div>
+
+        <button class="btn btn-primary" id="connectBtn" onclick="startCall()" disabled>
+            📞 Start Call
+        </button>
+
+        <button class="btn btn-danger" id="disconnectBtn" onclick="endCall()" style="display: none;">
+            📵 End Call
+        </button>
+
+        <div class="log" id="log"></div>
+    </div>
+
+    <!-- LiveKit Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+
+    <script>
+        let room = null;
+        let currentCallId = null;
+        let livekitUrl = '';
+
+        const BACKEND_URL = () => document.getElementById('backendUrl').value;
+
+        // Auto-load LiveKit URL from backend on page load
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${BACKEND_URL()}/api/config`);
+                if (response.ok) {
+                    const data = await response.json();
+                    livekitUrl = data.data.livekitUrl;
+                    document.getElementById('livekitUrl').value = livekitUrl;
+                    document.getElementById('connectBtn').disabled = false;
+                    log('Config loaded from backend', 'success');
+                } else {
+                    throw new Error('Failed to load config');
+                }
+            } catch (error) {
+                log('Error loading config: ' + error.message, 'error');
+                log('Make sure backend is running on port 3000', 'info');
+            }
+        }
+
+        // Load config on page load
+        window.onload = loadConfig;
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function setStatus(status, text) {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            dot.className = 'status-dot ' + status;
+            statusText.textContent = text;
+        }
+
+        async function startCall() {
+            try {
+                document.getElementById('connectBtn').disabled = true;
+                setStatus('connecting', 'Creating room...');
+                log('Creating room...', 'info');
+
+                // 1. Create room and get token
+                const callId = 'test-call-' + Date.now();
+                const response = await fetch(`${BACKEND_URL()}/api/rooms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ callId })
+                });
+
+                if (!response.ok) throw new Error('Failed to create room');
+                const roomData = await response.json();
+                log(`Room created: ${roomData.data.room.roomName}`, 'success');
+                currentCallId = roomData.data.room.roomName;
+
+                // 2. Get token for driver
+                setStatus('connecting', 'Getting token...');
+                const tokenResponse = await fetch(`${BACKEND_URL()}/api/rooms/${currentCallId}/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        participantId: 'driver-' + Date.now(),
+                        role: 'driver'
+                    })
+                });
+
+                if (!tokenResponse.ok) throw new Error('Failed to get token');
+                const tokenData = await tokenResponse.json();
+                log('Token received', 'success');
+
+                // 3. Connect to LiveKit
+                setStatus('connecting', 'Connecting to call...');
+                room = new LivekitClient.Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                });
+
+                room.on(LivekitClient.RoomEvent.Connected, () => {
+                    log('Connected to LiveKit room', 'success');
+                });
+
+                room.on(LivekitClient.RoomEvent.ParticipantConnected, (participant) => {
+                    log(`Participant joined: ${participant.identity}`, 'info');
+                    if (participant.identity.includes('ai-bot')) {
+                        log('🤖 AI Agent connected!', 'ai');
+                    }
+                });
+
+                room.on(LivekitClient.RoomEvent.ParticipantDisconnected, (participant) => {
+                    log(`Participant left: ${participant.identity}`, 'info');
+                });
+
+                room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                    if (track.kind === 'audio') {
+                        log(`Audio from: ${participant.identity}`, 'info');
+                        const audioElement = track.attach();
+                        document.body.appendChild(audioElement);
+                    }
+                });
+
+                room.on(LivekitClient.RoomEvent.Disconnected, () => {
+                    log('Disconnected from room', 'info');
+                    setStatus('', 'Disconnected');
+                });
+
+                await room.connect(livekitUrl, tokenData.data.token);
+
+                // 4. Enable microphone
+                await room.localParticipant.setMicrophoneEnabled(true);
+                log('Microphone enabled', 'success');
+
+                setStatus('connected', 'Connected - In Call');
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'block';
+                document.getElementById('audioIndicator').style.display = 'flex';
+
+                // 5. Spawn AI agent
+                log('Spawning AI agent...', 'info');
+                const spawnResponse = await fetch(`${BACKEND_URL()}/api/ai-agent/spawn`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        roomName: currentCallId,
+                        callId: currentCallId
+                    })
+                });
+
+                if (!spawnResponse.ok) {
+                    log('Warning: Failed to spawn AI agent', 'error');
+                } else {
+                    log('AI agent spawn requested', 'success');
+                }
+
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                setStatus('error', 'Error');
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        async function endCall() {
+            try {
+                log('Ending call...', 'info');
+
+                // Stop AI agent
+                if (currentCallId) {
+                    await fetch(`${BACKEND_URL()}/api/ai-agent/stop`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomName: currentCallId })
+                    }).catch(() => { });
+                }
+
+                // Disconnect from LiveKit
+                if (room) {
+                    await room.disconnect();
+                    room = null;
+                }
+
+                log('Call ended', 'success');
+                setStatus('', 'Disconnected');
+                document.getElementById('connectBtn').style.display = 'block';
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').style.display = 'none';
+                document.getElementById('audioIndicator').style.display = 'none';
+                currentCallId = null;
+
+            } catch (error) {
+                log(`Error ending call: ${error.message}`, 'error');
+            }
+        }
+
+        // Audio visualization
+        setInterval(() => {
+            if (room && room.state === 'connected') {
+                const bars = document.querySelectorAll('.bar');
+                bars.forEach(bar => {
+                    bar.style.height = Math.random() * 30 + 10 + 'px';
+                });
+            }
+        }, 100);
+    </script>
+</body>
+
+</html>

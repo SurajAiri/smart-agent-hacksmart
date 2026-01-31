@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import { responseFormatter } from "./src/middlewares/response.middlewares.mjs";
 import connectDB from "./src/utils/database.mjs";
 
@@ -15,6 +16,7 @@ const PORT = process.env.PORT || 3000;
 connectDB();
 
 // middlewares
+app.use(cors());
 app.use(express.json());
 app.use(responseFormatter);
 
@@ -22,6 +24,13 @@ app.use(responseFormatter);
 app.get("/", (req, res) => {
   res.sendResponse(200, {
     message: "Health Check for 'smart-agent-backend' APIs.",
+  });
+});
+
+// Config endpoint - expose non-secret config to frontend
+app.get("/api/config", (req, res) => {
+  res.sendResponse(200, {
+    livekitUrl: process.env.LIVEKIT_URL,
   });
 });
 

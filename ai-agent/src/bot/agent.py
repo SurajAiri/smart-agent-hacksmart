@@ -1,37 +1,36 @@
 """
 Voice Agent - The AI agent that handles voice conversations
 
-This module contains the Pipecat pipeline configuration for:
-- LiveKit transport (audio in/out)
-- Deepgram ASR (speech-to-text)
-- OpenAI LLM (conversation)
-- ElevenLabs TTS (text-to-speech)
+This module contains the Pipecat pipeline configuration using 
+pluggable providers for LLM, TTS, and ASR.
+
+Pipeline flow:
+LiveKit Audio In → ASR → LLM → TTS → LiveKit Audio Out
 """
 import asyncio
 from typing import Optional
 from loguru import logger
 
-from livekit import rtc
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.frames.frames import EndFrame, LLMMessagesFrame
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
-from pipecat.services.deepgram.stt import DeepgramSTTService
-from pipecat.services.openai.llm import OpenAILLMService
-from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.transports.livekit.transport import LiveKitTransport, LiveKitParams
 
 from src.config.settings import get_settings
 from src.events.callback import EventCallback
+from src.providers.registry import get_llm_provider, get_tts_provider, get_asr_provider
 
 
 class VoiceAgent:
     """
-    AI Voice Agent using Pipecat pipeline.
+    AI Voice Agent using Pipecat pipeline with pluggable providers.
     
-    Pipeline flow:
-    LiveKit Audio In → Deepgram ASR → OpenAI LLM → ElevenLabs TTS → LiveKit Audio Out
+    Providers are configured via settings:
+    - LLM_PROVIDER: LLM service (default: "langchain")
+    - TTS_PROVIDER: TTS service (default: "elevenlabs")
+    - ASR_PROVIDER: ASR service (default: "deepgram")
     """
     
     def __init__(
@@ -58,6 +57,7 @@ class VoiceAgent:
         Start the voice pipeline and run until stopped.
         """
         logger.info(f"Starting VoiceAgent for room: {self.room_name}")
+        logger.info(f"Providers - LLM: {self._settings.LLM_PROVIDER}, TTS: {self._settings.TTS_PROVIDER}, ASR: {self._settings.ASR_PROVIDER}")
         
         # Create LiveKit transport
         transport = LiveKitTransport(
@@ -72,25 +72,15 @@ class VoiceAgent:
             ),
         )
         
-        # Create ASR service (Deepgram)
-        stt = DeepgramSTTService(
-            api_key=self._settings.DEEPGRAM_API_KEY,
-            language="en",
-            model="nova-2",
-        )
+        # Create services from providers
+        asr_provider = get_asr_provider(self._settings.ASR_PROVIDER)
+        stt = asr_provider.create_service(self._settings)
         
-        # Create LLM service (Groq via OpenAI-compatible API)
-        llm = OpenAILLMService(
-            api_key=self._settings.GROQ_API_KEY,
-            model=self._settings.GROQ_MODEL,
-            base_url=self._settings.GROQ_BASE_URL,
-        )
+        llm_provider = get_llm_provider(self._settings.LLM_PROVIDER)
+        llm = llm_provider.create_service(self._settings)
         
-        # Create TTS service (ElevenLabs)
-        tts = ElevenLabsTTSService(
-            api_key=self._settings.ELEVENLABS_API_KEY,
-            voice_id=self._settings.ELEVENLABS_VOICE_ID,
-        )
+        tts_provider = get_tts_provider(self._settings.TTS_PROVIDER)
+        tts = tts_provider.create_service(self._settings)
         
         # Create conversation context
         messages = [
@@ -104,13 +94,13 @@ class VoiceAgent:
         
         # Build the pipeline
         pipeline = Pipeline([
-            transport.input(),      # Audio from LiveKit
-            stt,                    # Speech to text
-            context_aggregator.user(),   # Add user message to context
-            llm,                    # Generate response
-            tts,                    # Text to speech
-            transport.output(),     # Audio to LiveKit
-            context_aggregator.assistant(),  # Add assistant message to context
+            transport.input(),              # Audio from LiveKit
+            stt,                            # Speech to text
+            context_aggregator.user(),      # Add user message to context
+            llm,                            # Generate response
+            tts,                            # Text to speech
+            transport.output(),             # Audio to LiveKit
+            context_aggregator.assistant(), # Add assistant message to context
         ])
         
         # Create pipeline task

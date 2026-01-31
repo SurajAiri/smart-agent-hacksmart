@@ -4,7 +4,12 @@ uvicorn[standard]==0.27.1
 python-dotenv==1.0.1
 
 # Pipecat for voice pipeline
-pipecat-ai[livekit,silero,deepgram,openai,elevenlabs]
+pipecat-ai[livekit,silero,deepgram,openai,elevenlabs,langchain]
+
+# LangChain for pluggable LLM providers
+langchain
+langchain-groq
+langchain-openai
 
 # Audio processing
 numpy

@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Smart Agent AI...")
     logger.info(f"LiveKit URL: {settings.LIVEKIT_URL}")
     logger.info(f"Backend URL: {settings.BACKEND_URL}")
+    logger.info(f"Providers - LLM: {settings.LLM_PROVIDER}, TTS: {settings.TTS_PROVIDER}, ASR: {settings.ASR_PROVIDER}")
     
     # Initialize bot manager
     bot_manager = BotManager()
@@ -66,13 +67,19 @@ async def health_check():
 @app.get("/health")
 async def health():
     """Detailed health check"""
+    settings = get_settings()
     return {
         "status": "healthy",
+        "providers": {
+            "llm": settings.LLM_PROVIDER,
+            "tts": settings.TTS_PROVIDER,
+            "asr": settings.ASR_PROVIDER,
+        },
         "settings": {
-            "livekit_configured": bool(get_settings().LIVEKIT_URL),
-            "deepgram_configured": bool(get_settings().DEEPGRAM_API_KEY),
-            "openai_configured": bool(get_settings().OPENAI_API_KEY),
-            "elevenlabs_configured": bool(get_settings().ELEVENLABS_API_KEY),
+            "livekit_configured": bool(settings.LIVEKIT_URL),
+            "deepgram_configured": bool(settings.DEEPGRAM_API_KEY),
+            "groq_configured": bool(settings.GROQ_API_KEY),
+            "elevenlabs_configured": bool(settings.ELEVENLABS_API_KEY),
         },
     }
 

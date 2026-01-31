@@ -20,15 +20,25 @@ class Settings(BaseSettings):
     
     # Deepgram (ASR)
     DEEPGRAM_API_KEY: str
+    DEEPGRAM_MODEL: str = "nova-2"
+    DEEPGRAM_LANGUAGE: str = "en"
     
-    # Groq (LLM) - Uses OpenAI-compatible API
+    # Groq (LLM)
     GROQ_API_KEY: str
     GROQ_MODEL: str = "qwen/qwen3-32b"
-    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    
+    # OpenAI (LLM) - Optional, for switching providers
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
     
     # ElevenLabs (TTS)
     ELEVENLABS_API_KEY: str
     ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel
+    
+    # Provider selection (plug-and-play)
+    LLM_PROVIDER: str = "groq"           # "groq", "openai"
+    TTS_PROVIDER: str = "elevenlabs"     # "elevenlabs"
+    ASR_PROVIDER: str = "deepgram"       # "deepgram"
     
     # Node.js Backend (for callbacks)
     BACKEND_URL: str = "http://localhost:3000"

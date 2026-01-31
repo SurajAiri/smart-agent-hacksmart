@@ -28,7 +28,7 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env  # Configure API keys!
-uvicorn src.main:app --reload --port 8000
+python3 -m uvicorn src.main:app --reload --port 8000
 ```
 
 ### 2. Configure `.env` files

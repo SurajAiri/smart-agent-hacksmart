@@ -6,6 +6,7 @@ import connectDB from "./src/utils/database.mjs";
 // Import routes
 import roomRoutes from "./src/routes/room.routes.mjs";
 import webhookRoutes from "./src/routes/webhook.routes.mjs";
+import aiAgentRoutes from "./src/routes/ai-agent.routes.mjs";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 
 // API Routes
 app.use("/api/rooms", roomRoutes);
+app.use("/api/ai-agent", aiAgentRoutes);
 
 // Webhook Routes (note: webhook routes have their own body parser)
 app.use("/webhooks", webhookRoutes);
@@ -33,5 +35,6 @@ app.use("/webhooks", webhookRoutes);
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Room API: http://localhost:${PORT}/api/rooms`);
+  console.log(`AI Agent API: http://localhost:${PORT}/api/ai-agent`);
   console.log(`Webhooks: http://localhost:${PORT}/webhooks/livekit`);
 });

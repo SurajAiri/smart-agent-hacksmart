@@ -42,6 +42,7 @@ If you cannot help with something, offer to connect them to a human agent."""
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore extra env variables not defined in Settings
 
 
 @lru_cache()

@@ -17,10 +17,10 @@ from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.frames.frames import EndFrame, LLMMessagesFrame
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
-from pipecat.services.deepgram import DeepgramSTTService
-from pipecat.services.openai import OpenAILLMService
-from pipecat.services.elevenlabs import ElevenLabsTTSService
-from pipecat.transports.services.livekit import LiveKitTransport, LiveKitParams
+from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
+from pipecat.transports.livekit.transport import LiveKitTransport, LiveKitParams
 
 from src.config.settings import get_settings
 from src.events.callback import EventCallback
@@ -63,6 +63,7 @@ class VoiceAgent:
         transport = LiveKitTransport(
             url=self.livekit_url,
             token=self.token,
+            room_name=self.room_name,
             params=LiveKitParams(
                 audio_in_enabled=True,
                 audio_out_enabled=True,

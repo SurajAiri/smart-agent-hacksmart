@@ -5,7 +5,7 @@ This module contains the Pipecat pipeline configuration using
 pluggable providers for LLM, TTS, and ASR.
 
 Pipeline flow:
-LiveKit Audio In → ASR → LLM → TTS → LiveKit Audio Out
+LiveKit Audio In → VAD → ASR → LLM → TTS → LiveKit Audio Out
 """
 import asyncio
 from typing import Optional
@@ -17,6 +17,8 @@ from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.frames.frames import EndFrame, LLMMessagesFrame
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.transports.livekit.transport import LiveKitTransport, LiveKitParams
+from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
 
 from src.config.settings import get_settings
 from src.events.callback import EventCallback
@@ -59,7 +61,7 @@ class VoiceAgent:
         logger.info(f"Starting VoiceAgent for room: {self.room_name}")
         logger.info(f"Providers - LLM: {self._settings.LLM_PROVIDER}, TTS: {self._settings.TTS_PROVIDER}, ASR: {self._settings.ASR_PROVIDER}")
         
-        # Create LiveKit transport
+        # Create LiveKit transport with VAD for interruption detection
         transport = LiveKitTransport(
             url=self.livekit_url,
             token=self.token,
@@ -69,6 +71,9 @@ class VoiceAgent:
                 audio_out_enabled=True,
                 audio_in_sample_rate=16000,
                 audio_out_sample_rate=24000,
+                vad_analyzer=SileroVADAnalyzer(params=VADParams(
+                    stop_secs=0.3,  # Time of silence to detect end of speech
+                )),
             ),
         )
         

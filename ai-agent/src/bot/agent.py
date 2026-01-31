@@ -24,6 +24,8 @@ from pipecat.audio.vad.vad_analyzer import VADParams
 from src.config.settings import get_settings
 from src.events.callback import EventCallback
 from src.providers.registry import get_llm_provider, get_tts_provider, get_asr_provider
+from src.tools.definitions import get_tools_list
+from src.tools.handlers import register_tools
 
 
 class VoiceAgent:
@@ -107,17 +109,21 @@ class VoiceAgent:
             tts = tts_provider.create_service(self._settings)
             logger.info(f"TTS service created: {tts}")
             
-            # Create conversation context
-            logger.info("Creating conversation context...")
+            # Register tool handlers with the LLM service
+            logger.info("Registering tools with LLM service...")
+            register_tools(llm)
+            
+            # Create conversation context with tools
+            logger.info("Creating conversation context with tools...")
             messages = [
                 {
                     "role": "system",
                     "content": self._settings.SYSTEM_PROMPT,
                 },
             ]
-            context = OpenAILLMContext(messages)
+            context = OpenAILLMContext(messages, tools=get_tools_list())
             context_aggregator = llm.create_context_aggregator(context)
-            logger.info(f"Context aggregator created: {context_aggregator}")
+            logger.info(f"Context aggregator created with {len(get_tools_list())} tools")
             
             # Build the pipeline
             logger.info("Building pipeline...")

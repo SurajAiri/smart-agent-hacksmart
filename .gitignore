@@ -1,4 +1,39 @@
 .DS_Store
 *.wav
 
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js
+.next/
+**/.next/
+out/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+
 resources/

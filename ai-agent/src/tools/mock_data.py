@@ -1,240 +1,440 @@
 """
-Mock data for driver support queries.
+Mock data for Battery Smart driver support queries.
 
 This simulates database responses for:
-- Trip information
-- Driver details
-- FAQs
+- Swap history and invoices
+- Battery Smart stations
+- Subscription plans
+- Leave information
 - Support escalation
+
+PRICING STRUCTURE:
+- Base swap: ₹170
+- Secondary swap: ₹70 (varies by zone/city)
+- Free leaves: 4 days/month
+- Leave penalty: ₹120 (if absent beyond limit, recovered at ₹60/swap)
+- Service charge: ₹40/swap for vehicle services
 """
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
+import random
 
-# Mock Driver Data
+# ===== PRICING CONSTANTS =====
+PRICING = {
+    "base_swap": 170,
+    "secondary_swap": 70,  # Can vary by zone
+    "free_leaves_per_month": 4,
+    "leave_penalty": 120,
+    "leave_penalty_recovery_per_swap": 60,
+    "service_charge_per_swap": 40,
+}
+
+# Zone-wise secondary swap pricing
+ZONE_PRICING = {
+    "delhi_ncr": {"secondary_swap": 70, "base_swap": 170},
+    "mumbai": {"secondary_swap": 75, "base_swap": 175},
+    "bangalore": {"secondary_swap": 65, "base_swap": 165},
+    "hyderabad": {"secondary_swap": 60, "base_swap": 160},
+    "pune": {"secondary_swap": 68, "base_swap": 168},
+}
+
+# ===== MOCK DRIVER DATA =====
 MOCK_DRIVERS = {
     "DRV001": {
         "driver_id": "DRV001",
         "name": "Rajesh Kumar",
         "phone": "+91-9876543210",
         "vehicle": {
-            "type": "Sedan",
-            "model": "Maruti Swift Dzire",
-            "number": "MH 12 AB 1234",
-            "color": "White"
+            "type": "E-Rickshaw",
+            "model": "Piaggio Ape E-City",
+            "number": "DL 1E AB 1234",
+            "battery_id": "BAT-2024-001"
         },
-        "rating": 4.8,
-        "total_trips": 1523,
+        "zone": "delhi_ncr",
+        "subscription": {
+            "plan": "unlimited",
+            "valid_till": (datetime.now() + timedelta(days=45)).strftime("%Y-%m-%d"),
+            "swaps_used_today": 3,
+            "swaps_this_month": 78
+        },
+        "leaves": {
+            "used_this_month": 2,
+            "free_remaining": 2,
+            "pending_penalty": 0
+        },
         "status": "active"
     },
     "DRV002": {
-        "driver_id": "DRV002", 
+        "driver_id": "DRV002",
         "name": "Amit Singh",
         "phone": "+91-9876543211",
         "vehicle": {
-            "type": "Hatchback",
-            "model": "Hyundai i20",
-            "number": "DL 01 CD 5678",
-            "color": "Silver"
+            "type": "E-Rickshaw",
+            "model": "Mahindra Treo",
+            "number": "UP 14 EB 5678",
+            "battery_id": "BAT-2024-002"
         },
-        "rating": 4.6,
-        "total_trips": 892,
+        "zone": "delhi_ncr",
+        "subscription": {
+            "plan": "daily",
+            "valid_till": datetime.now().strftime("%Y-%m-%d"),
+            "swaps_used_today": 5,
+            "swaps_this_month": 112
+        },
+        "leaves": {
+            "used_this_month": 5,
+            "free_remaining": 0,
+            "pending_penalty": 120  # 1 extra leave taken
+        },
         "status": "active"
     }
 }
 
-# Mock Trip Data
-MOCK_TRIPS = {
-    "TRIP001": {
-        "trip_id": "TRIP001",
-        "driver_id": "DRV001",
-        "pickup": {
-            "address": "Andheri West Metro Station, Mumbai",
-            "lat": 19.1196,
-            "lng": 72.8467
+# ===== MOCK SWAP HISTORY =====
+MOCK_SWAP_HISTORY = {
+    "DRV001": [
+        {
+            "swap_id": "SWP-20240115-001",
+            "timestamp": (datetime.now() - timedelta(hours=2)).isoformat(),
+            "station_id": "STN-DEL-042",
+            "station_name": "Battery Smart Lajpat Nagar",
+            "battery_out": "BAT-2024-001",
+            "battery_in": "BAT-2024-156",
+            "charge_out": 15,
+            "charge_in": 98,
+            "swap_type": "primary",
+            "amount": 170,
+            "payment_status": "paid"
         },
-        "dropoff": {
-            "address": "Bandra Kurla Complex, Mumbai",
-            "lat": 19.0653,
-            "lng": 72.8694
+        {
+            "swap_id": "SWP-20240115-002",
+            "timestamp": (datetime.now() - timedelta(hours=5)).isoformat(),
+            "station_id": "STN-DEL-018",
+            "station_name": "Battery Smart Nehru Place",
+            "battery_out": "BAT-2024-156",
+            "battery_in": "BAT-2024-001",
+            "charge_out": 22,
+            "charge_in": 95,
+            "swap_type": "secondary",
+            "amount": 70,
+            "payment_status": "paid"
         },
-        "status": "in_progress",
-        "estimated_arrival": (datetime.now() + timedelta(minutes=12)).isoformat(),
-        "fare_estimate": 245.00,
-        "distance_km": 8.5,
-        "duration_mins": 25,
-        "payment_method": "Cash",
-        "booked_at": (datetime.now() - timedelta(minutes=10)).isoformat()
+        {
+            "swap_id": "SWP-20240114-001",
+            "timestamp": (datetime.now() - timedelta(days=1, hours=3)).isoformat(),
+            "station_id": "STN-DEL-042",
+            "station_name": "Battery Smart Lajpat Nagar",
+            "battery_out": "BAT-2024-089",
+            "battery_in": "BAT-2024-001",
+            "charge_out": 18,
+            "charge_in": 97,
+            "swap_type": "primary",
+            "amount": 170,
+            "payment_status": "paid"
+        },
+    ],
+    "DRV002": [
+        {
+            "swap_id": "SWP-20240115-003",
+            "timestamp": (datetime.now() - timedelta(hours=1)).isoformat(),
+            "station_id": "STN-DEL-005",
+            "station_name": "Battery Smart Karol Bagh",
+            "battery_out": "BAT-2024-002",
+            "battery_in": "BAT-2024-078",
+            "charge_out": 12,
+            "charge_in": 99,
+            "swap_type": "primary",
+            "amount": 170,
+            "service_charge": 40,  # Vehicle service was done
+            "leave_penalty_recovery": 60,  # Recovering penalty
+            "total_amount": 270,
+            "payment_status": "paid"
+        },
+    ]
+}
+
+# ===== MOCK INVOICE DATA =====
+def generate_invoice(driver_id: str, date_str: str = None) -> Dict[str, Any]:
+    """Generate invoice breakdown for a driver."""
+    driver = MOCK_DRIVERS.get(driver_id)
+    if not driver:
+        return None
+    
+    zone = driver.get("zone", "delhi_ncr")
+    pricing = ZONE_PRICING.get(zone, PRICING)
+    
+    # Mock invoice data
+    swaps = MOCK_SWAP_HISTORY.get(driver_id, [])
+    primary_swaps = len([s for s in swaps if s.get("swap_type") == "primary"])
+    secondary_swaps = len([s for s in swaps if s.get("swap_type") == "secondary"])
+    
+    invoice = {
+        "driver_id": driver_id,
+        "driver_name": driver["name"],
+        "period": date_str or datetime.now().strftime("%B %Y"),
+        "zone": zone,
+        "breakdown": {
+            "primary_swaps": {
+                "count": primary_swaps,
+                "rate": pricing["base_swap"],
+                "total": primary_swaps * pricing["base_swap"]
+            },
+            "secondary_swaps": {
+                "count": secondary_swaps,
+                "rate": pricing.get("secondary_swap", 70),
+                "total": secondary_swaps * pricing.get("secondary_swap", 70)
+            },
+            "service_charges": {
+                "count": 1,  # Mock: 1 service done
+                "rate": PRICING["service_charge_per_swap"],
+                "total": PRICING["service_charge_per_swap"]
+            },
+            "leave_penalty": {
+                "excess_leaves": driver["leaves"]["used_this_month"] - PRICING["free_leaves_per_month"] if driver["leaves"]["used_this_month"] > PRICING["free_leaves_per_month"] else 0,
+                "rate": PRICING["leave_penalty"],
+                "total": driver["leaves"].get("pending_penalty", 0)
+            }
+        },
+        "total_amount": (
+            primary_swaps * pricing["base_swap"] +
+            secondary_swaps * pricing.get("secondary_swap", 70) +
+            PRICING["service_charge_per_swap"] +
+            driver["leaves"].get("pending_penalty", 0)
+        )
+    }
+    return invoice
+
+# ===== MOCK STATIONS DATA =====
+MOCK_STATIONS = {
+    "STN-DEL-042": {
+        "station_id": "STN-DEL-042",
+        "name": "Battery Smart Lajpat Nagar",
+        "address": "Shop 15, Central Market, Lajpat Nagar II, New Delhi",
+        "coordinates": {"lat": 28.5677, "lng": 77.2433},
+        "zone": "delhi_ncr",
+        "timings": "6:00 AM - 10:00 PM",
+        "batteries_available": 12,
+        "total_capacity": 20,
+        "services": ["swap", "vehicle_service", "dsk_activation"],
+        "contact": "+91-11-4567890",
+        "is_dsk": True
     },
-    "TRIP002": {
-        "trip_id": "TRIP002",
-        "driver_id": "DRV002",
-        "pickup": {
-            "address": "Connaught Place, Delhi",
-            "lat": 28.6315,
-            "lng": 77.2167
-        },
-        "dropoff": {
-            "address": "Indira Gandhi Airport, Delhi",
-            "lat": 28.5562,
-            "lng": 77.1000
-        },
-        "status": "completed",
-        "actual_fare": 520.00,
-        "distance_km": 15.2,
-        "duration_mins": 45,
-        "payment_method": "UPI",
-        "completed_at": (datetime.now() - timedelta(hours=2)).isoformat()
+    "STN-DEL-018": {
+        "station_id": "STN-DEL-018",
+        "name": "Battery Smart Nehru Place",
+        "address": "Block A, Nehru Place, New Delhi",
+        "coordinates": {"lat": 28.5494, "lng": 77.2516},
+        "zone": "delhi_ncr",
+        "timings": "7:00 AM - 9:00 PM",
+        "batteries_available": 8,
+        "total_capacity": 15,
+        "services": ["swap"],
+        "contact": "+91-11-4567891",
+        "is_dsk": False
+    },
+    "STN-DEL-005": {
+        "station_id": "STN-DEL-005",
+        "name": "Battery Smart Karol Bagh",
+        "address": "Ajmal Khan Road, Karol Bagh, New Delhi",
+        "coordinates": {"lat": 28.6519, "lng": 77.1909},
+        "zone": "delhi_ncr",
+        "timings": "6:00 AM - 11:00 PM",
+        "batteries_available": 15,
+        "total_capacity": 25,
+        "services": ["swap", "vehicle_service", "dsk_activation", "new_subscription"],
+        "contact": "+91-11-4567892",
+        "is_dsk": True
+    },
+    "STN-DEL-023": {
+        "station_id": "STN-DEL-023",
+        "name": "Battery Smart Connaught Place",
+        "address": "Block M, Connaught Place, New Delhi",
+        "coordinates": {"lat": 28.6315, "lng": 77.2167},
+        "zone": "delhi_ncr",
+        "timings": "24/7",
+        "batteries_available": 22,
+        "total_capacity": 30,
+        "services": ["swap", "vehicle_service", "dsk_activation", "new_subscription"],
+        "contact": "+91-11-4567893",
+        "is_dsk": True
     }
 }
 
-# Mock FAQ Data
-MOCK_FAQS = {
-    "pricing": {
-        "question": "How is fare calculated?",
-        "answer": "Fare is calculated based on distance traveled, time taken, and current demand. Base fare starts at ₹30, plus ₹12 per kilometer and ₹2 per minute. Peak hours may have surge pricing of 1.2x to 1.5x.",
-        "category": "pricing"
+# ===== SUBSCRIPTION PLANS =====
+SUBSCRIPTION_PLANS = {
+    "daily": {
+        "name": "Daily Plan",
+        "description": "Pay per day, unlimited swaps",
+        "price": 199,
+        "validity_days": 1,
+        "features": ["Unlimited swaps", "All stations access", "No commitment"]
     },
-    "cancellation": {
-        "question": "What is the cancellation policy?",
-        "answer": "You can cancel a ride for free within 2 minutes of booking. After that, a cancellation fee of ₹50 applies. If the driver is already at pickup location, the fee is ₹100. Repeated cancellations may affect your account.",
-        "category": "policy"
+    "weekly": {
+        "name": "Weekly Plan",
+        "description": "7 days unlimited swaps at discounted rate",
+        "price": 999,
+        "validity_days": 7,
+        "features": ["Unlimited swaps", "All stations access", "15% savings vs daily"]
     },
-    "payment": {
-        "question": "What payment methods are accepted?",
-        "answer": "We accept Cash, UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, and our Wallet. For safety, we recommend digital payments. Wallet offers 5% cashback on rides.",
-        "category": "payment"
+    "monthly": {
+        "name": "Monthly Plan",
+        "description": "30 days unlimited swaps, best value",
+        "price": 2999,
+        "validity_days": 30,
+        "features": ["Unlimited swaps", "All stations access", "Priority support", "25% savings"]
     },
-    "safety": {
-        "question": "How do you ensure passenger safety?",
-        "answer": "All drivers undergo background verification. We have SOS button for emergencies, live ride tracking shared with contacts, 24/7 support, and insurance coverage for all trips. OTP verification ensures you board the right vehicle.",
-        "category": "safety"
-    },
-    "refund": {
-        "question": "How do I get a refund?",
-        "answer": "Refunds for cancelled rides are processed within 24-48 hours to your original payment method. For fare disputes, raise a complaint in app under Trip History > Report Issue. Our team reviews within 24 hours.",
-        "category": "payment"
-    },
-    "lost_item": {
-        "question": "I left something in the car. What should I do?",
-        "answer": "Go to Trip History, select the trip, and tap 'Lost Item'. We'll connect you with the driver. If driver has found the item, you can arrange pickup. A convenience fee of ₹100 may apply for item return trips.",
-        "category": "support"
-    },
-    "driver_earnings": {
-        "question": "How do driver earnings work?",
-        "answer": "Drivers earn 80% of the trip fare. Payments are settled weekly to registered bank accounts. Incentives include peak hour bonuses (₹50-200 per trip), daily targets (₹500 bonus for 10+ trips), and weekly leaderboard prizes.",
-        "category": "driver"
-    },
-    "vehicle_requirements": {
-        "question": "What are the vehicle requirements for drivers?",
-        "answer": "Vehicle must be less than 8 years old, have valid registration and insurance, pass safety inspection, and have commercial permit. AC must be functional. We conduct periodic vehicle audits.",
-        "category": "driver"
+    "unlimited": {
+        "name": "Unlimited Plan",
+        "description": "60 days mega saver plan",
+        "price": 5499,
+        "validity_days": 60,
+        "features": ["Unlimited swaps", "All stations access", "Priority support", "Vehicle servicing discount", "35% savings"]
     }
 }
 
-# Support escalation reasons
+# ===== ESCALATION REASONS =====
 ESCALATION_REASONS = [
-    "accident_emergency",
-    "harassment",
-    "payment_fraud",
-    "account_blocked",
-    "legal_issue",
+    "battery_issue",
+    "station_problem",
+    "payment_dispute",
+    "subscription_issue",
+    "vehicle_breakdown",
+    "safety_concern",
     "other_urgent"
 ]
 
 
-def get_current_trip(driver_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """Get current active trip for a driver."""
-    for trip_id, trip in MOCK_TRIPS.items():
-        if trip["status"] == "in_progress":
-            if driver_id is None or trip["driver_id"] == driver_id:
-                # Add driver info
-                driver = MOCK_DRIVERS.get(trip["driver_id"], {})
-                return {**trip, "driver": driver}
-    return None
+# ===== HELPER FUNCTIONS =====
+
+def get_swap_history(driver_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """Get recent swap history for a driver."""
+    swaps = MOCK_SWAP_HISTORY.get(driver_id, [])
+    return swaps[:limit]
 
 
-def get_trip_by_id(trip_id: str) -> Optional[Dict[str, Any]]:
-    """Get trip details by ID."""
-    trip = MOCK_TRIPS.get(trip_id)
-    if trip:
-        driver = MOCK_DRIVERS.get(trip["driver_id"], {})
-        return {**trip, "driver": driver}
-    return None
+def get_invoice_explanation(driver_id: str) -> Dict[str, Any]:
+    """Get detailed invoice breakdown with explanations."""
+    return generate_invoice(driver_id)
 
 
-def get_driver_info(driver_id: str) -> Optional[Dict[str, Any]]:
-    """Get driver information."""
-    return MOCK_DRIVERS.get(driver_id)
-
-
-def search_faqs(query: str) -> List[Dict[str, Any]]:
-    """Search FAQs by keyword matching."""
-    query_lower = query.lower()
-    results = []
+def find_nearest_stations(lat: float, lng: float, limit: int = 5, dsk_only: bool = False) -> List[Dict[str, Any]]:
+    """Find nearest Battery Smart stations."""
+    stations = list(MOCK_STATIONS.values())
     
-    # Keyword mapping for common queries
-    keyword_map = {
-        "price": ["pricing"],
-        "cost": ["pricing"],
-        "fare": ["pricing"],
-        "charge": ["pricing"],
-        "cancel": ["cancellation"],
-        "payment": ["payment"],
-        "pay": ["payment"],
-        "upi": ["payment"],
-        "cash": ["payment"],
-        "safe": ["safety"],
-        "emergency": ["safety"],
-        "sos": ["safety"],
-        "refund": ["refund"],
-        "money back": ["refund"],
-        "lost": ["lost_item"],
-        "forgot": ["lost_item"],
-        "left": ["lost_item"],
-        "earning": ["driver_earnings"],
-        "income": ["driver_earnings"],
-        "salary": ["driver_earnings"],
-        "vehicle": ["vehicle_requirements"],
-        "car": ["vehicle_requirements"],
-        "requirement": ["vehicle_requirements"]
+    if dsk_only:
+        stations = [s for s in stations if s.get("is_dsk", False)]
+    
+    # Sort by mock distance (in real app, would calculate from coordinates)
+    for station in stations:
+        # Simple distance approximation
+        station["distance_km"] = round(
+            abs(station["coordinates"]["lat"] - lat) * 111 +
+            abs(station["coordinates"]["lng"] - lng) * 85,
+            1
+        )
+    
+    stations.sort(key=lambda x: x["distance_km"])
+    return stations[:limit]
+
+
+def get_station_availability(station_id: str) -> Dict[str, Any]:
+    """Get real-time battery availability at a station."""
+    station = MOCK_STATIONS.get(station_id)
+    if not station:
+        return None
+    
+    return {
+        "station_id": station_id,
+        "name": station["name"],
+        "batteries_available": station["batteries_available"],
+        "total_capacity": station["total_capacity"],
+        "availability_percent": round(station["batteries_available"] / station["total_capacity"] * 100),
+        "status": "high" if station["batteries_available"] > 10 else "medium" if station["batteries_available"] > 5 else "low",
+        "estimated_wait": "No wait" if station["batteries_available"] > 5 else f"{random.randint(5, 15)} minutes"
     }
-    
-    matched_keys = set()
-    for keyword, faq_keys in keyword_map.items():
-        if keyword in query_lower:
-            matched_keys.update(faq_keys)
-    
-    # If no keyword match, do basic text search
-    if not matched_keys:
-        for key, faq in MOCK_FAQS.items():
-            if query_lower in faq["question"].lower() or query_lower in faq["answer"].lower():
-                matched_keys.add(key)
-    
-    for key in matched_keys:
-        if key in MOCK_FAQS:
-            results.append(MOCK_FAQS[key])
-    
-    return results
 
 
-def get_trip_history(limit: int = 5) -> List[Dict[str, Any]]:
-    """Get recent trip history."""
-    trips = []
-    for trip_id, trip in MOCK_TRIPS.items():
-        driver = MOCK_DRIVERS.get(trip["driver_id"], {})
-        trips.append({**trip, "driver": driver})
-    return trips[:limit]
+def get_driver_subscription(driver_id: str) -> Dict[str, Any]:
+    """Get driver's current subscription details."""
+    driver = MOCK_DRIVERS.get(driver_id)
+    if not driver:
+        return None
+    
+    sub = driver.get("subscription", {})
+    plan_details = SUBSCRIPTION_PLANS.get(sub.get("plan", "daily"), {})
+    
+    valid_till = datetime.strptime(sub["valid_till"], "%Y-%m-%d")
+    days_remaining = (valid_till - datetime.now()).days
+    
+    return {
+        "driver_id": driver_id,
+        "driver_name": driver["name"],
+        "current_plan": sub.get("plan"),
+        "plan_name": plan_details.get("name"),
+        "valid_till": sub["valid_till"],
+        "days_remaining": max(0, days_remaining),
+        "is_expired": days_remaining < 0,
+        "swaps_today": sub.get("swaps_used_today", 0),
+        "swaps_this_month": sub.get("swaps_this_month", 0),
+        "renewal_options": list(SUBSCRIPTION_PLANS.keys()),
+        "zone": driver.get("zone", "delhi_ncr")
+    }
+
+
+def get_leave_info(driver_id: str) -> Dict[str, Any]:
+    """Get driver's leave information."""
+    driver = MOCK_DRIVERS.get(driver_id)
+    if not driver:
+        return None
+    
+    leaves = driver.get("leaves", {})
+    
+    return {
+        "driver_id": driver_id,
+        "driver_name": driver["name"],
+        "free_leaves_per_month": PRICING["free_leaves_per_month"],
+        "leaves_used": leaves.get("used_this_month", 0),
+        "leaves_remaining": leaves.get("free_remaining", PRICING["free_leaves_per_month"]),
+        "pending_penalty": leaves.get("pending_penalty", 0),
+        "penalty_rate": PRICING["leave_penalty"],
+        "recovery_rate_per_swap": PRICING["leave_penalty_recovery_per_swap"],
+        "swaps_to_clear_penalty": (
+            leaves.get("pending_penalty", 0) // PRICING["leave_penalty_recovery_per_swap"]
+            if leaves.get("pending_penalty", 0) > 0 else 0
+        )
+    }
+
+
+def find_nearest_dsk(lat: float, lng: float) -> Dict[str, Any]:
+    """Find nearest DSK (Driver Service Kendra) for subscription activation."""
+    dsk_stations = find_nearest_stations(lat, lng, limit=3, dsk_only=True)
+    
+    if dsk_stations:
+        nearest = dsk_stations[0]
+        return {
+            "found": True,
+            "station": nearest,
+            "message": f"Nearest DSK is {nearest['name']}, {nearest['distance_km']} km away. Visit for subscription activation or leave management."
+        }
+    
+    return {
+        "found": False,
+        "message": "No DSK found nearby. Please contact support for assistance."
+    }
 
 
 def create_support_ticket(reason: str, description: str) -> Dict[str, Any]:
     """Create a support escalation ticket."""
-    ticket_id = f"TKT{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    ticket_id = f"BST{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    
+    high_priority_reasons = ["battery_issue", "safety_concern", "vehicle_breakdown"]
+    
     return {
         "ticket_id": ticket_id,
         "reason": reason,
         "description": description,
         "status": "open",
-        "priority": "high" if reason in ["accident_emergency", "harassment"] else "normal",
+        "priority": "high" if reason in high_priority_reasons else "normal",
         "created_at": datetime.now().isoformat(),
-        "estimated_response": "A support agent will contact you within 15 minutes" if reason in ["accident_emergency", "harassment"] else "Our team will respond within 2 hours"
+        "estimated_response": "A support agent will contact you within 10 minutes" if reason in high_priority_reasons else "Our team will respond within 1 hour"
     }

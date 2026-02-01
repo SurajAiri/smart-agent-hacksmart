@@ -5,10 +5,9 @@ Cleans LLM output before sending to TTS to remove emojis,
 special characters, and formatting that would be spoken literally.
 """
 import re
-from typing import AsyncGenerator
 
 from loguru import logger
-from pipecat.frames.frames import Frame, TextFrame, TTSTextFrame
+from pipecat.frames.frames import Frame, TextFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 
@@ -161,29 +160,28 @@ class TextSanitizerProcessor(FrameProcessor):
     
     async def process_frame(
         self, frame: Frame, direction: FrameDirection
-    ) -> AsyncGenerator[Frame, None]:
+    ) -> None:
         """
         Process frames and sanitize text content.
         
         Args:
             frame: Input frame
             direction: Processing direction
-            
-        Yields:
-            Processed frames with sanitized text
         """
+        await super().process_frame(frame, direction)
+        
         # Only process text frames going downstream (to TTS)
         if direction == FrameDirection.DOWNSTREAM:
             if isinstance(frame, TextFrame):
                 # Sanitize the text content
                 sanitized = self.sanitize_text(frame.text)
                 if sanitized:
-                    # Create new frame with sanitized text
-                    yield TextFrame(text=sanitized)
+                    # Push new frame with sanitized text
+                    await self.push_frame(TextFrame(text=sanitized), direction)
                 else:
                     # Skip empty frames after sanitization
                     logger.debug(f"Skipping empty frame after sanitization")
                 return
         
         # Pass through all other frames unchanged
-        yield frame
+        await self.push_frame(frame, direction)

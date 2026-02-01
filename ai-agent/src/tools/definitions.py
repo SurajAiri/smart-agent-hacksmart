@@ -1,8 +1,15 @@
 """
-Tool definitions for LLM function calling.
+Tool definitions for Battery Smart driver support LLM function calling.
 
 These tools follow the OpenAI function calling schema,
 which is compatible with Groq and most LLM providers.
+
+Tools available:
+1. get_swap_history - Swap history lookup + invoice explanation
+2. find_nearest_station - Nearest Battery Smart station + real-time availability
+3. get_subscription_info - Subscription plan validity + renewals + pricing
+4. get_leave_info - Leave information + nearest DSK for activation
+5. escalate_to_support - Escalation to human support
 """
 from typing import List, Dict, Any
 
@@ -12,31 +19,22 @@ TOOLS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
-            "name": "get_trip_status",
-            "description": "Get the current trip status, ETA, fare, and route information. Use this when the user asks about their current ride, trip status, estimated arrival time, or fare.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "trip_id": {
-                        "type": "string",
-                        "description": "Optional trip ID. If not provided, returns the current active trip."
-                    }
-                },
-                "required": []
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_driver_info",
-            "description": "Get information about the driver including name, vehicle details, rating, and contact. Use when user asks about driver details, car info, or wants to identify their ride.",
+            "name": "get_swap_history",
+            "description": "Get battery swap history and invoice breakdown for a driver. Use when user asks about their recent swaps, swap details, invoice explanation, billing breakdown, or wants to understand charges. This includes primary swap (₹170), secondary swap (₹70), service charges (₹40/swap), and leave penalty recovery (₹60/swap).",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "driver_id": {
                         "type": "string",
-                        "description": "Optional driver ID. If not provided, returns info for current trip's driver."
+                        "description": "Driver ID. If not provided, uses the current caller's ID."
+                    },
+                    "include_invoice": {
+                        "type": "boolean",
+                        "description": "Whether to include detailed invoice breakdown. Default true."
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of recent swaps to retrieve (default: 5, max: 10)"
                     }
                 },
                 "required": []
@@ -46,31 +44,76 @@ TOOLS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
-            "name": "lookup_faq",
-            "description": "Search frequently asked questions about pricing, cancellation, payment methods, safety features, refunds, lost items, driver earnings, or vehicle requirements. Use for general policy or how-to questions.",
+            "name": "find_nearest_station",
+            "description": "Find nearest Battery Smart stations with real-time battery availability. Use when user asks about nearby stations, where to swap battery, station locations, battery availability, or wait times. Can also find DSK (Driver Service Kendra) for subscription activation.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The user's question or topic to search for (e.g., 'cancellation policy', 'payment methods', 'safety features')"
+                    "latitude": {
+                        "type": "number",
+                        "description": "User's current latitude. If not provided, uses default location."
+                    },
+                    "longitude": {
+                        "type": "number",
+                        "description": "User's current longitude. If not provided, uses default location."
+                    },
+                    "dsk_only": {
+                        "type": "boolean",
+                        "description": "If true, only return DSK stations that can handle subscription activation and leave management."
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of stations to return (default: 3, max: 5)"
                     }
                 },
-                "required": ["query"]
+                "required": []
             }
         }
     },
     {
         "type": "function",
         "function": {
-            "name": "get_trip_history",
-            "description": "Get the user's recent trip history. Use when user asks about past rides, previous trips, or ride history.",
+            "name": "get_subscription_info",
+            "description": "Get driver's subscription plan details, validity, renewal options and pricing. Use when user asks about their plan, subscription status, renewal, plan expiry, available plans, or pricing for daily/weekly/monthly/unlimited plans.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "limit": {
-                        "type": "integer",
-                        "description": "Number of recent trips to retrieve (default: 5, max: 10)"
+                    "driver_id": {
+                        "type": "string",
+                        "description": "Driver ID. If not provided, uses the current caller's ID."
+                    },
+                    "show_all_plans": {
+                        "type": "boolean",
+                        "description": "If true, include all available subscription plans and their pricing."
+                    }
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_leave_info",
+            "description": "Get driver's leave information including free leaves (4 days/month), used leaves, pending penalties (₹120 per excess leave), and penalty recovery status (₹60 recovered per swap). Also finds nearest DSK for leave activation if needed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "driver_id": {
+                        "type": "string",
+                        "description": "Driver ID. If not provided, uses the current caller's ID."
+                    },
+                    "find_nearest_dsk": {
+                        "type": "boolean",
+                        "description": "If true, also return nearest DSK location for leave activation."
+                    },
+                    "latitude": {
+                        "type": "number",
+                        "description": "User's latitude for finding nearest DSK."
+                    },
+                    "longitude": {
+                        "type": "number",
+                        "description": "User's longitude for finding nearest DSK."
                     }
                 },
                 "required": []
@@ -81,13 +124,13 @@ TOOLS: List[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "escalate_to_support",
-            "description": "Escalate an issue to human support. Use ONLY when: (1) user explicitly asks to speak to a human, (2) there's an emergency or safety concern, (3) the issue cannot be resolved through other tools, (4) user is very frustrated after multiple attempts.",
+            "description": "Escalate an issue to human support agent. Use ONLY when: (1) user explicitly asks to speak to a human/agent, (2) there's a battery or vehicle emergency, (3) the issue cannot be resolved through other tools, (4) user is frustrated after multiple attempts, (5) complex payment disputes.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "reason": {
                         "type": "string",
-                        "enum": ["accident_emergency", "harassment", "payment_fraud", "account_blocked", "legal_issue", "other_urgent"],
+                        "enum": ["battery_issue", "station_problem", "payment_dispute", "subscription_issue", "vehicle_breakdown", "safety_concern", "other_urgent"],
                         "description": "Category of the escalation"
                     },
                     "description": {

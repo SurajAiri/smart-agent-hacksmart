@@ -7,11 +7,15 @@ voice conversations via Pipecat and LiveKit.
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from src.config.settings import get_settings
 from src.api.routes import router as api_router
+from src.api.handoff_routes import router as handoff_router
 from src.bot.manager import BotManager
+from src.core.conversation_tracker import get_conversation_tracker
+from src.core.handoff_manager import get_handoff_manager
 
 # Global bot manager instance
 bot_manager: BotManager | None = None
@@ -32,6 +36,13 @@ async def lifespan(app: FastAPI):
     bot_manager = BotManager()
     app.state.bot_manager = bot_manager
     
+    # Initialize conversation tracker and handoff manager
+    conversation_tracker = get_conversation_tracker()
+    handoff_manager = get_handoff_manager()
+    app.state.conversation_tracker = conversation_tracker
+    app.state.handoff_manager = handoff_manager
+    
+    logger.info("Handoff system initialized")
     logger.info("Smart Agent AI started successfully")
     
     yield
@@ -50,8 +61,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Add CORS middleware for agent dashboard
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, restrict to dashboard domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Include API routes
 app.include_router(api_router, prefix="/api")
+app.include_router(handoff_router, prefix="/api")
 
 
 @app.get("/")

@@ -146,13 +146,56 @@ async def handle_escalate_to_support(params: FunctionCallParams) -> str:
     
     logger.info(f"Tool call: escalate_to_support(reason={reason}, description={description})")
     
+    # Create support ticket (existing functionality)
     ticket = create_support_ticket(reason, description)
     
+    # Also trigger handoff system if reason is high priority
+    try:
+        from src.core.conversation_tracker import get_conversation_tracker
+        from src.core.escalation_engine import get_escalation_engine
+        from src.core.handoff_manager import get_handoff_manager
+        from src.core.models import HandoffTrigger, IntentCategory
+        
+        # Map escalation reason to trigger
+        trigger_map = {
+            "accident_emergency": HandoffTrigger.SAFETY_EMERGENCY,
+            "harassment": HandoffTrigger.HARASSMENT_REPORT,
+            "payment_fraud": HandoffTrigger.FRAUD_DETECTION,
+            "account_blocked": HandoffTrigger.EXPLICIT_REQUEST,
+            "legal_issue": HandoffTrigger.EXPLICIT_REQUEST,
+            "other_urgent": HandoffTrigger.EXPLICIT_REQUEST,
+        }
+        
+        trigger = trigger_map.get(reason, HandoffTrigger.EXPLICIT_REQUEST)
+        
+        # Record this as an escalation request intent
+        tracker = get_conversation_tracker()
+        # Find the call_id from active conversations (tool calls happen in context)
+        for call_id in tracker.get_active_conversations():
+            state = tracker.get_conversation(call_id)
+            if state and not state.escalation_triggered:
+                # Add escalation request to high risk intents
+                state.high_risk_intents_detected.append(IntentCategory.ESCALATION_REQUEST)
+                
+                # Trigger handoff
+                engine = get_escalation_engine()
+                priority = engine.get_priority(state, trigger)
+                
+                handoff_manager = get_handoff_manager()
+                await handoff_manager.trigger_handoff(
+                    state=state,
+                    trigger=trigger,
+                    priority=priority,
+                )
+                logger.info(f"Handoff triggered via escalate_to_support for call {call_id}")
+                break
+    except Exception as e:
+        logger.error(f"Error triggering handoff from tool: {e}")
+    
     return (
-        f"I've created a support ticket for you. Ticket ID: {ticket['ticket_id']}. "
+        f"I'm connecting you with a support agent right away. Ticket ID: {ticket['ticket_id']}. "
         f"Priority: {ticket['priority']}. "
-        f"{ticket['estimated_response']}. "
-        "Is there anything else I can help you with in the meantime?"
+        "A human agent will join this call shortly. Please stay on the line."
     )
 
 

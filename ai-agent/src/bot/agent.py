@@ -5,7 +5,7 @@ This module contains the Pipecat pipeline configuration using
 pluggable providers for LLM, TTS, and ASR.
 
 Pipeline flow:
-LiveKit Audio In → VAD → ASR → LLM → TTS → LiveKit Audio Out
+LiveKit Audio In → VAD → ASR → Tracker → LLM → TTS → LiveKit Audio Out
 """
 import asyncio
 import traceback
@@ -26,6 +26,9 @@ from src.events.callback import EventCallback
 from src.providers.registry import get_llm_provider, get_tts_provider, get_asr_provider
 from src.tools.definitions import get_tools_list
 from src.tools.handlers import register_tools
+from src.core.tracking_processor import ConversationTrackingProcessor
+from src.core.text_sanitizer import TextSanitizerProcessor
+from src.core.models import DriverInfo
 
 
 class VoiceAgent:
@@ -125,18 +128,50 @@ class VoiceAgent:
             context_aggregator = llm.create_context_aggregator(context)
             logger.info(f"Context aggregator created with {len(get_tools_list())} tools")
             
-            # Build the pipeline
+            # Create conversation tracking processor for handoff detection
+            logger.info("Creating conversation tracking processor...")
+            driver_info = DriverInfo(
+                phone_number="unknown",  # Will be updated when we have caller info
+                preferred_language=self._settings.SARVAM_LANGUAGE,
+            )
+            
+            async def on_handoff_triggered(alert):
+                """Handle handoff trigger - notify user and prepare for transfer."""
+                logger.warning(f"Handoff callback triggered for alert: {alert.id}")
+                # The handoff manager has already added this to the queue
+                # Here we could inject a message to the user
+                await self._callback.emit_handoff_triggered({
+                    "alert_id": str(alert.id),
+                    "trigger": alert.trigger.value,
+                    "priority": alert.priority.value,
+                    "queue_position": alert.queue_position,
+                })
+            
+            tracking_processor = ConversationTrackingProcessor(
+                call_id=self.call_id,
+                room_name=self.room_name,
+                driver_info=driver_info,
+                on_handoff_triggered=on_handoff_triggered,
+            )
+            
+            # Build the pipeline with tracking processor
             logger.info("Building pipeline...")
+            
+            # Create text sanitizer to clean LLM output before TTS
+            text_sanitizer = TextSanitizerProcessor()
+            
             pipeline = Pipeline([
                 transport.input(),              # Audio from LiveKit
                 stt,                            # Speech to text
+                tracking_processor,             # Track conversation for handoff
                 context_aggregator.user(),      # Add user message to context
                 llm,                            # Generate response
+                text_sanitizer,                 # Clean text for TTS (remove emojis, etc.)
                 tts,                            # Text to speech
                 transport.output(),             # Audio to LiveKit
                 context_aggregator.assistant(), # Add assistant message to context
             ])
-            logger.info(f"Pipeline built: {pipeline}")
+            logger.info(f"Pipeline built with conversation tracking: {pipeline}")
             
             # Create pipeline task
             logger.info("Creating pipeline task...")
@@ -157,8 +192,10 @@ class VoiceAgent:
             
             @transport.event_handler("on_participant_disconnected") 
             async def on_participant_disconnected(transport, participant):
-                logger.info(f"EVENT: Participant disconnected: {participant.identity}")
-                await self._callback.emit_participant_left(participant.identity)
+                # Handle both string and object participant
+                identity = participant if isinstance(participant, str) else getattr(participant, 'identity', str(participant))
+                logger.info(f"EVENT: Participant disconnected: {identity}")
+                await self._callback.emit_participant_left(identity)
             
             # Create and run the pipeline
             logger.info("Creating pipeline runner...")

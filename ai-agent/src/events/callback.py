@@ -76,6 +76,19 @@ class EventCallback:
         })
         logger.info(f"Handoff requested: {reason}")
     
+    async def emit_handoff_triggered(self, handoff_data: dict):
+        """
+        Emit when automatic handoff is triggered.
+        
+        This includes alert details for the backend to track.
+        """
+        await self._emit("handoff_triggered", handoff_data)
+        logger.info(
+            f"Handoff triggered: alert_id={handoff_data.get('alert_id')}, "
+            f"trigger={handoff_data.get('trigger')}, "
+            f"priority={handoff_data.get('priority')}"
+        )
+    
     async def emit_error(self, error: str):
         """Emit error event"""
         await self._emit("error", {
